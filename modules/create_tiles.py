@@ -1,4 +1,4 @@
-import math, cmath
+import math, cmath, os, time
 from typing import List, Tuple
 import matplotlib.pyplot as plt
 from .utils import *
@@ -232,3 +232,24 @@ def hash_edge(v1: complex, v2: complex) -> int:
     edge = tuple(sorted([v1_tuple, v2_tuple]))
     edge_hash = hash(edge)
     return edge_hash
+
+def create_and_draw_tiles(image: Image.Image, config: dict) -> List[Rhombi]:
+    """
+    Create the tiles for the mosaic and draw them on a canvas.
+    
+    Parameters:
+    image (Image.Image): The original image.
+    config (dict): The configuration settings.
+    
+    Returns:
+    List[Rhombi]: The tiles for the mosaic.
+    """
+    config['timing']['create_tiles'] = time.time()
+    log_message(f'4- Creating tiles for {config["divisions"]} divisions in a {image.size} canvas', config)
+    tiles = create_tiles(config['divisions'], image.size)
+    # Save a copy of the tiles with borders
+    canvas = create_canvas(image.size)
+    draw_borders(canvas, tiles, color=(255, 0, 0))
+    canvas.save(os.path.join(config['output_path'], config['tile_canvas_name']), optimize=True)
+    log_message(f'5- Created {len(tiles)} Rhombi. Took {time.time() - config["timing"]["create_tiles"]}', config)
+    return tiles

@@ -1,13 +1,16 @@
 {
-    "divisions": 3,
+    "divisions": 5,
     "verbose": true,
+    "show_color_analysis": false,
     "database_path": "photomosaic/image_database.json",
-    "image_path": "photomosaic/picture.jpg",
+    "image_path": "photomosaic/picture.png",
     "source_folder": "photomosaic/image_source/",
     "image_folder": "photomosaic/image_database/",
     "output_path": "photomosaic/output/",
     "original_image_name": "1-original_image.png",
     "tile_canvas_name": "2-tile_canvas.png",
     "image_with_borders_name": "3-image_with_borders.png",
-    "mosaic_name": "4-mosaic.png"
+    "mosaic_name": "4-mosaic.png",
+    "color_mosaic_name": "5-color_mosaic.png",
+    "timing": {}
 }

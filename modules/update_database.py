@@ -1,7 +1,7 @@
 from .utils import *
 import json, os
 
-def update_image_database(source_folder: str, database_path: str, image_folder: str, max_size:Tuple[int, int]=(1024, 1024)) -> bool:
+def update_image_database(config: dict, max_size: Tuple[int, int]=(1024, 1024)) -> bool:
     """
     Update the image database if the source folder has been modified since the last update.
     
@@ -13,7 +13,11 @@ def update_image_database(source_folder: str, database_path: str, image_folder: 
     
     Returns:
     bool: True if the database was updated, False otherwise."""
-    # Load existing database if it exists
+    log_message('1- Updating image database...', config)
+    config['timing']['update_image_database'] = time.time()
+    source_folder = config['source_folder']
+    database_path = config['database_path']
+    image_folder = config['image_folder']
     if os.path.exists(database_path):
         with open(database_path, 'r') as file:
             image_database = json.load(file)
@@ -66,5 +70,5 @@ def update_image_database(source_folder: str, database_path: str, image_folder: 
     # Save the updated database
     with open(database_path, 'w') as file:
         json.dump(image_database, file)
-    print("Image database updated.")
+    log_message(f'2- Image database updated. Took {time.time() - config["timing"]["update_image_database"]}', config)
     return True

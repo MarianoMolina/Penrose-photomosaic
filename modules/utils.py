@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image, ImageDraw
 from typing import List, Tuple
+import math, json, os, time
 
 # Object structures
 Triangle = Tuple[str, complex, complex, complex] # shape, v1, v2, v3
@@ -99,24 +100,31 @@ def calculate_average_color(image_slice: Image.Image) -> Tuple[int, int, int]:
     Returns:
     Tuple[int, int, int]: The average color of the image.
     """
-    if image_slice.mode == 'P':
-        # Convert paletted images to RGB
-        image_slice = image_slice.convert('RGB')
+    if isinstance(image_slice, Image.Image):
+        if image_slice.mode == 'P':
+            # Convert paletted images to RGB
+            image_slice = image_slice.convert('RGB')
 
-    pixels = list(image_slice.getdata())
-    total_pixels = len(pixels)
+        pixels = list(image_slice.getdata())
+        total_pixels = len(pixels)
 
-    if image_slice.mode == 'RGBA':
-        # Image with alpha channel
-        avg_r = sum(r for r, g, b, a in pixels) / total_pixels
-        avg_g = sum(g for r, g, b, a in pixels) / total_pixels
-        avg_b = sum(b for r, g, b, a in pixels) / total_pixels
+        if image_slice.mode == 'RGBA':
+            # Image with alpha channel
+            avg_r = sum(r for r, g, b, a in pixels) / total_pixels
+            avg_g = sum(g for r, g, b, a in pixels) / total_pixels
+            avg_b = sum(b for r, g, b, a in pixels) / total_pixels
+        else:
+            # Image without alpha channel
+            avg_r = sum(r for r, g, b in pixels) / total_pixels
+            avg_g = sum(g for r, g, b in pixels) / total_pixels
+            avg_b = sum(b for r, g, b in pixels) / total_pixels
+    elif isinstance(image_slice, np.ndarray):
+        # Process as NumPy array
+        avg_r = np.mean(image_slice[:, :, 0])
+        avg_g = np.mean(image_slice[:, :, 1])
+        avg_b = np.mean(image_slice[:, :, 2])
     else:
-        # Image without alpha channel
-        avg_r = sum(r for r, g, b in pixels) / total_pixels
-        avg_g = sum(g for r, g, b in pixels) / total_pixels
-        avg_b = sum(b for r, g, b in pixels) / total_pixels
-
+        raise TypeError("Unsupported image type")
     return int(avg_r), int(avg_g), int(avg_b)
 
 def draw_borders(canvas: Image.Image, tiles: List[Rhombi], color:Tuple[int,int,int]=(0, 255, 0), thickness: int = 1) -> None:
@@ -148,3 +156,71 @@ def calculate_bounding_box_dimensions(vertices: List[Tuple[float, float]]) -> Tu
     min_y = min(y for _, y in vertices)
     max_y = max(y for _, y in vertices)
     return max_x - min_x, max_y - min_y
+
+def log_message(message: str, config: dict) -> None:
+    """
+    Log a message to the console if verbose mode is enabled.
+
+    Parameters:
+    message (str): The message to be logged.
+    config (dict): Configuration settings which includes the verbose flag.
+    """
+    if config.get('verbose', False):
+        print(message)
+        
+def divide_image_into_chunks_and_get_color(image, chunk_size=(10, 10)):
+    """ Divide an image into chunks and calculate average color of each chunk. """
+    img_array = np.array(image)
+    chunk_colors = []
+    for x in range(0, img_array.shape[0], chunk_size[0]):
+        for y in range(0, img_array.shape[1], chunk_size[1]):
+            chunk = img_array[x:x + chunk_size[0], y:y + chunk_size[1]]
+            avg_color = calculate_average_color(chunk)
+            chunk_colors.append(avg_color)
+            
+    return chunk_colors
+
+def calculate_scale_factor(config):
+    divisions = config['divisions']
+    scale = 4 * (2.618 ** divisions) / (math.log(divisions) * (divisions ** 2))
+    scale = min(50, scale)
+    return scale
+
+def load_config(config_file: str) -> dict:
+    """
+    Load the configuration settings from a JSON file.
+
+    Parameters:
+    config_file (str): The path to the configuration JSON file.
+
+    Returns:
+    dict: Configuration settings loaded from the file.
+    """
+    with open(config_file, 'r') as file:
+        config = json.load(file)
+    log_message(f'0- Loaded configuration from {config_file}', config)
+    config['scale_factor'] = calculate_scale_factor(config)
+    return config
+
+def load_image(config: dict) -> Image.Image:
+    """
+    Load the image to be used for the mosaic.
+    
+    Parameters:
+    config (dict): The configuration settings.
+    
+    Returns:
+    Image.Image: The original image.
+    """
+    log_message(f'3- Loading image from {config["image_path"]}', config)
+    original_image = Image.open(config["image_path"])
+    original_image.save(os.path.join(config['output_path'], config['original_image_name']))
+    return original_image
+
+def save_mosaic(mosaic, color_mosaic, config):
+        log_message(f'10- Saving mosaics', config)
+        config['timing']['save_mosaic'] = time.time()
+        mosaic.save(os.path.join(config['output_path'], config['mosaic_name']), optimize=True)
+        color_mosaic.save(os.path.join(config['output_path'], config['color_mosaic_name']), optimize=True)
+        log_message(f'11- Saved mosaics. Took {time.time() - config["timing"]["save_mosaic"]}', config)
+        return True
