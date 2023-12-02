@@ -1,0 +1,13 @@
+{
+    "divisions": 3,
+    "verbose": true,
+    "database_path": "photomosaic/image_database.json",
+    "image_path": "photomosaic/picture.jpg",
+    "source_folder": "photomosaic/image_source/",
+    "image_folder": "photomosaic/image_database/",
+    "output_path": "photomosaic/output/",
+    "original_image_name": "1-original_image.png",
+    "tile_canvas_name": "2-tile_canvas.png",
+    "image_with_borders_name": "3-image_with_borders.png",
+    "mosaic_name": "4-mosaic.png"
+}
