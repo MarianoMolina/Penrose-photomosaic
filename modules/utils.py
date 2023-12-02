@@ -78,17 +78,22 @@ def color_distance(color1: Tuple[int, int, int], color2: Tuple[int, int, int]) -
 def calculate_color_variance(image: Image.Image) -> float:
     """
     Calculate the variance of the colors in an image.
-    
+
     Parameters:
     image (Image.Image): The image.
-    
+
     Returns:
     float: The variance of the colors in the image.
     """
     np_image = np.array(image)
-    variances = np.var(np_image[:, :, :3], axis=(0, 1))  # Calculate variance for each channel
-    overall_variance = np.mean(variances)  # Overall variance
-    return overall_variance
+    
+    # Check if the image is grayscale or color
+    if len(np_image.shape) == 2:  # Grayscale image
+        variance = np.var(np_image)  # Variance of the grayscale values
+    else:  # Color image
+        variances = np.var(np_image[:, :, :3], axis=(0, 1))  # Variance for each color channel
+        variance = np.mean(variances)  # Overall variance
+    return variance
 
 def calculate_average_color(image_slice: Image.Image) -> Tuple[int, int, int]:
     """

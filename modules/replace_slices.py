@@ -132,9 +132,10 @@ def overlay_blend(image: Image.Image, target_color: Tuple[int, int, int], opacit
     Returns:
     Image.Image: The blended image.
     """
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
     # Ensure opacity is within the correct range
     opacity = max(0, min(opacity, 1))
-
     # Create a solid color image
     color_image = Image.new("RGB", image.size, color=target_color)
 

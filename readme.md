@@ -2,6 +2,9 @@
 
 This project creates a unique photomosaic using Penrose tiling. It takes a target image, an image database, and a specified number of divisions, then assembles a mosaic where each tile is a slice of an image from the database. The matching is based on color proximity, offering a visually appealing and non-repeating pattern of Penrose tiles. It also provides a mosaic of simple colors of your target image. 
 
+![sparkles](screenshot_1.png)
+![sparkles](screenshot_2.png)
+
 ## Features
 
 - **Penrose Tiling**: Generates an aesthetically pleasing, non-repeating pattern.
@@ -84,3 +87,18 @@ The program generates the following outputs in the specified `output_path`:
 - Image with Penrose tiling borders.
 - Solid color mosaic
 - Final photomosaic.
+
+### Original target image
+![sparkles](output/1-original_image.png)
+
+### Penrose Tiling
+![sparkles](output/2-tile_canvas.png)
+
+### Image with tiles drawn
+![sparkles](output/3-image_with_borders.png)
+
+### Solid color mosaic
+![sparkles](output/5-color_mosaic.png)
+
+### Photomosaic
+![sparkles](output/4-mosaic.png)
