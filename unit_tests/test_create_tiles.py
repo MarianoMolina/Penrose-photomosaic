@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from ..penrose_tiling import create_tiles
+from ..modules.create_tiles import create_tiles_and_scale
 
 def test_create_tiles():
     canvas_size = (1080, 1080)
     divisions = 6
-    tiles = create_tiles(divisions, canvas_size)
+    tiles = create_tiles_and_scale(divisions, canvas_size)
 
     fig, ax = plt.subplots()
     ax.set_xlim(0, canvas_size[0])

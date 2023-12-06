@@ -3,7 +3,7 @@ from typing import List, Tuple
 import matplotlib.pyplot as plt
 from .utils import *
 
-def create_tiles(divisions: int, canvas_size: Tuple[int, int]) -> List[Rhombi]:
+def create_tiles_and_scale(divisions: int, canvas_size: Tuple[int, int]) -> List[Rhombi]:
     """
     Create the tiles for the mosaic.
     
@@ -14,15 +14,22 @@ def create_tiles(divisions: int, canvas_size: Tuple[int, int]) -> List[Rhombi]:
     Returns:
     List[Rhombi]: The tiles for the mosaic.
     """
-    base = 5
-    phi = (5 ** 0.5 + 1) / 2
-    triangles = create_initial_triangles(base)
-    divided_triangles = divide_triangles(triangles, divisions, phi)
-    draw_triangles(divided_triangles, "Divided Triangles")
-    rhombi = pair_triangles_and_form_rhombi(divided_triangles)
-    draw_rhombi(rhombi, "Formed Rhombi")
+    rhombi = create_tiles(divisions)
     scaled_tiles = normalize_and_scale_tiles(rhombi, canvas_size)
     return scaled_tiles
+
+def create_tiles(divisions: int, save_partial: bool = True) -> List[Rhombi]:
+    if divisions < 15:
+        base = 5
+        phi = (5 ** 0.5 + 1) / 2
+        triangles = create_initial_triangles(base)
+        divided_triangles = divide_triangles(triangles, divisions, phi)
+        if save_partial: draw_triangles(divided_triangles, "Divided Triangles")
+        rhombi = pair_triangles_and_form_rhombi(divided_triangles)
+        if save_partial: draw_rhombi(rhombi, "Formed Rhombi")
+        return rhombi
+    else:
+        return False # AVOID CREATING RHOMBI VECTORS FOR DIVISIONS > 15
 
 def create_initial_triangles(base: int) -> List[Triangle]:
     """
@@ -233,9 +240,9 @@ def hash_edge(v1: complex, v2: complex) -> int:
     edge_hash = hash(edge)
     return edge_hash
 
-def create_and_draw_tiles(image: Image.Image, config: dict) -> List[Rhombi]:
+def get_rhombi_by_division_and_scale(image_size: Tuple[int, int], config: dict, color: Tuple[int, int, int]=(255, 0, 0)) -> List[Rhombi]:
     """
-    Create the tiles for the mosaic and draw them on a canvas.
+    Get the tiles for the mosaic by division and scale them.
     
     Parameters:
     image (Image.Image): The original image.
@@ -244,12 +251,31 @@ def create_and_draw_tiles(image: Image.Image, config: dict) -> List[Rhombi]:
     Returns:
     List[Rhombi]: The tiles for the mosaic.
     """
-    config['timing']['create_tiles'] = time.time()
-    log_message(f'4- Creating tiles for {config["divisions"]} divisions in a {image.size} canvas', config)
-    tiles = create_tiles(config['divisions'], image.size)
-    # Save a copy of the tiles with borders
-    canvas = create_canvas(image.size)
-    draw_borders(canvas, tiles, color=(255, 0, 0))
-    canvas.save(os.path.join(config['output_path'], config['tile_canvas_name']), optimize=True)
-    log_message(f'5- Created {len(tiles)} Rhombi. Took {time.time() - config["timing"]["create_tiles"]}', config)
-    return tiles
+    config['timing']['getting_tiles'] = time.time()
+    log_message(f'4- Creating tiles for {config["divisions"]} divisions in a {image_size} canvas', config)
+    if config['divisions'] in config['available_vectors']:
+        base_tiles = load_vector(f'rhombi_{config["divisions"]}')
+        source = 'Loaded'
+    else:
+        base_tiles = create_tiles(config['divisions'], config['save_partial'])
+        source = 'Created'
+    if base_tiles and source:
+        tiles = normalize_and_scale_tiles(base_tiles, image_size)
+        canvas = create_canvas(image_size)
+        draw_borders(canvas, tiles, color)
+        canvas.save(os.path.join(config['output_path'], config['tile_canvas_name']), optimize=True)
+        elapsed_time = round(time.time() - config["timing"]["getting_tiles"], 3)
+        log_message(f'5- {source} {len(tiles)} Rhombi. Took {elapsed_time}s', config)
+        return tiles
+    else:
+        raise Exception(f'Error: Cannot retrieve or create for {config["divisions"]} divisions.')
+
+def create_and_save_rhombi_vectors_from_division(config: dict):
+    division = config['divisions']
+    print(f'Creating rhombi vectors for {division} divisions.')
+    rhombi = create_tiles(division, False)
+    print(f'Created {len(rhombi)} rhombi.')
+    if save_vector(rhombi, f'rhombi_{division}', config):
+        print(f'Saved rhombi_{division}.json')
+    else:
+        print(f'Failed to save rhombi_{division}.json')

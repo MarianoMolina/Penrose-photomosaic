@@ -9,12 +9,14 @@ def visualize_database_and_target_image_colors(config: dict):
     if config.get('verbose', False): log_message(f'(opt) - Visualizing database data and target image colors', config)
     with open(config['database_path']) as file:
         data = json.load(file)
-        
     image = Image.open(config['image_path'])
     rgb_image = image.convert('RGB')
     colors = divide_image_into_chunks_and_get_color(rgb_image)
+    fig = get_visualization_graph(colors, data)
+    plt.show()
+    
+def get_visualization_graph(colors: list, data: dict) -> plt:
     r_img, g_img, b_img = zip(*colors)
-
     # Extract RGB values
     r_db, g_db, b_db, _ = zip(*[color for color in data.values()])
     distances = [min([color_distance(tc, dbc) for dbc in zip(r_db, g_db, b_db)]) for tc in colors]
@@ -49,5 +51,4 @@ def visualize_database_and_target_image_colors(config: dict):
     # Connect the rotation event
     fig.canvas.mpl_connect('motion_notify_event', sync_rotation)
 
-    # Show the figure
-    plt.show()
+    return fig

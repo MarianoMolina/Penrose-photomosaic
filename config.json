@@ -1,9 +1,10 @@
 {
-    "divisions": 5,
+    "divisions": 10,
     "verbose": true,
-    "show_color_analysis": false,
+    "show_color_analysis": true,
+    "save_partial": true,
     "database_path": "photomosaic/image_database.json",
-    "image_path": "photomosaic/picture.png",
+    "image_path": "photomosaic/picture_3.png",
     "source_folder": "photomosaic/image_source/",
     "image_folder": "photomosaic/image_database/",
     "output_path": "photomosaic/output/",
@@ -12,5 +13,7 @@
     "image_with_borders_name": "3-image_with_borders.png",
     "mosaic_name": "4-mosaic.png",
     "color_mosaic_name": "5-color_mosaic.png",
-    "timing": {}
+    "vector_dir": "photomosaic/vectors",
+    "timing": {},
+    "available_vectors": []
 }

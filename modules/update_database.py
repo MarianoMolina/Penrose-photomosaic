@@ -1,7 +1,7 @@
 from .utils import *
-import json, os
+import json, os, re
 
-def update_image_database(config: dict, max_size: Tuple[int, int]=(1024, 1024)) -> bool:
+def update_image_database(config: dict, max_size: Tuple[int, int]=(1024, 1024)) -> int:
     """
     Update the image database if the source folder has been modified since the last update.
     
@@ -13,8 +13,6 @@ def update_image_database(config: dict, max_size: Tuple[int, int]=(1024, 1024)) 
     
     Returns:
     bool: True if the database was updated, False otherwise."""
-    log_message('1- Updating image database...', config)
-    config['timing']['update_image_database'] = time.time()
     source_folder = config['source_folder']
     database_path = config['database_path']
     image_folder = config['image_folder']
@@ -70,5 +68,29 @@ def update_image_database(config: dict, max_size: Tuple[int, int]=(1024, 1024)) 
     # Save the updated database
     with open(database_path, 'w') as file:
         json.dump(image_database, file)
-    log_message(f'2- Image database updated. Took {time.time() - config["timing"]["update_image_database"]}', config)
-    return True
+    return len(source_images)
+
+def find_matching_indices(directory: str, pattern_str: str = r'rhombi_(\d+)'):
+    pattern = re.compile(pattern_str)
+    indices = []
+
+    for filename in os.listdir(directory):
+        match = pattern.match(filename)
+        if match:
+            index = match.group(1)  # Extracting the 'i' part
+            indices.append(int(index))  # Converting 'i' to an integer
+
+    return indices
+
+def update_database_and_config(config_path: str) -> dict:
+    config = load_config(config_path)
+    log_message(f'0- Loaded configuration from {config_path}', config)
+    config['scale_factor'] = calculate_scale_factor(config)
+    log_message(f'1- Scale factor: {config["scale_factor"]}. Updating image database... ', config)
+    config['timing']['update_image_database'] = time.time()
+    img_amount = update_image_database(config)
+    available_vectors = find_matching_indices(config['vector_dir'])
+    config['available_vectors'] = available_vectors
+    elapsed_time = round(time.time() - config["timing"]["update_image_database"], 3)
+    log_message(f'2- Image database updated. {img_amount} img in databas. {len(available_vectors)} vectors available. Took {elapsed_time}s', config)
+    return config

@@ -111,18 +111,23 @@ def calculate_average_color(image_slice: Image.Image) -> Tuple[int, int, int]:
             image_slice = image_slice.convert('RGB')
 
         pixels = list(image_slice.getdata())
-        total_pixels = len(pixels)
+        if pixels: 
+            total_pixels = len(pixels)
 
-        if image_slice.mode == 'RGBA':
-            # Image with alpha channel
-            avg_r = sum(r for r, g, b, a in pixels) / total_pixels
-            avg_g = sum(g for r, g, b, a in pixels) / total_pixels
-            avg_b = sum(b for r, g, b, a in pixels) / total_pixels
+            if image_slice.mode == 'RGBA':
+                # Image with alpha channel
+                avg_r = sum(r for r, g, b, a in pixels) / total_pixels
+                avg_g = sum(g for r, g, b, a in pixels) / total_pixels
+                avg_b = sum(b for r, g, b, a in pixels) / total_pixels
+            else:
+                # Image without alpha channel
+                avg_r = sum(r for r, g, b in pixels) / total_pixels
+                avg_g = sum(g for r, g, b in pixels) / total_pixels
+                avg_b = sum(b for r, g, b in pixels) / total_pixels
         else:
-            # Image without alpha channel
-            avg_r = sum(r for r, g, b in pixels) / total_pixels
-            avg_g = sum(g for r, g, b in pixels) / total_pixels
-            avg_b = sum(b for r, g, b in pixels) / total_pixels
+            # Image has no pixels
+            print(f'WARNING: Image {image_slice} has no pixels')
+            avg_r, avg_g, avg_b = 0, 0, 0
     elif isinstance(image_slice, np.ndarray):
         # Process as NumPy array
         avg_r = np.mean(image_slice[:, :, 0])
@@ -173,7 +178,7 @@ def log_message(message: str, config: dict) -> None:
     if config.get('verbose', False):
         print(message)
         
-def divide_image_into_chunks_and_get_color(image, chunk_size=(10, 10)):
+def divide_image_into_chunks_and_get_color(image, chunk_size=(10, 10)) -> List[Tuple[int, int, int]]:
     """ Divide an image into chunks and calculate average color of each chunk. """
     img_array = np.array(image)
     chunk_colors = []
@@ -188,23 +193,21 @@ def divide_image_into_chunks_and_get_color(image, chunk_size=(10, 10)):
 def calculate_scale_factor(config):
     divisions = config['divisions']
     scale = 4 * (2.618 ** divisions) / (math.log(divisions) * (divisions ** 2))
-    scale = min(50, scale)
+    scale = min(30, scale)
     return scale
 
-def load_config(config_file: str) -> dict:
+def load_config(config_path: str) -> dict:
     """
     Load the configuration settings from a JSON file.
 
     Parameters:
-    config_file (str): The path to the configuration JSON file.
+    config_path (str): The path to the configuration JSON file.
 
     Returns:
     dict: Configuration settings loaded from the file.
     """
-    with open(config_file, 'r') as file:
+    with open(config_path, 'r') as file:
         config = json.load(file)
-    log_message(f'0- Loaded configuration from {config_file}', config)
-    config['scale_factor'] = calculate_scale_factor(config)
     return config
 
 def load_image(config: dict) -> Image.Image:
@@ -223,9 +226,46 @@ def load_image(config: dict) -> Image.Image:
     return original_image
 
 def save_mosaic(mosaic, color_mosaic, config):
-        log_message(f'10- Saving mosaics', config)
-        config['timing']['save_mosaic'] = time.time()
-        mosaic.save(os.path.join(config['output_path'], config['mosaic_name']), optimize=True)
-        color_mosaic.save(os.path.join(config['output_path'], config['color_mosaic_name']), optimize=True)
-        log_message(f'11- Saved mosaics. Took {time.time() - config["timing"]["save_mosaic"]}', config)
-        return True
+    log_message(f'10- Saving mosaics', config)
+    config['timing']['save_mosaic'] = time.time()
+    mosaic.save(os.path.join(config['output_path'], config['mosaic_name']), optimize=True)
+    color_mosaic.save(os.path.join(config['output_path'], config['color_mosaic_name']), optimize=True)
+    elapsed_time = round(time.time() - config["timing"]["save_mosaic"], 3)
+    log_message(f'11- Saved mosaics. Took {elapsed_time}s', config)
+    return True
+         
+def save_vector(vectors: List[Tuple], name:str, config: dict):
+    serializable_list = serialize_vector_complex(vectors)
+    json_str = json.dumps(serializable_list)
+    with open(f'{config["vector_dir"]}/{name}.json', 'w') as file:
+        file.write(json_str)
+    return True
+    
+def serialize_vector_complex(vectors: List[Tuple]) -> List[Tuple]:
+    return [[(c.real, c.imag) for c in t] for t in vectors]
+
+def de_serialize_vector_complex(serializable_list: List[Tuple]) -> List[Tuple]:
+    return [tuple(complex(real, imag) for real, imag in t) for t in serializable_list]
+        
+def load_vector(name: str) -> List[Tuple]:
+    with open(f'photomosaic/vectors/{name}.json', 'r') as file:
+        serializable_list = json.load(file)
+    return de_serialize_vector_complex(serializable_list)
+
+def load_vector_file(file_name: str) -> List[List[List[float]]]:
+    with open(f'photomosaic/vectors/{file_name}', 'r') as file:
+        serializable_list = json.load(file)
+    return serializable_list
+
+def list_files_in_folder(folder_path):
+    """
+    Lists all files in a given folder.
+
+    Parameters:
+    folder_path (str): The path to the folder.
+
+    Returns:
+    list: A list of file names in the folder.
+    """
+    files = [file for file in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, file))]
+    return files

@@ -3,7 +3,7 @@ from typing import List, Tuple
 from .utils import *
 import json, random, os, time
 
-def slice_image(image: str, tiles: List[Rhombi]) -> List[Img_slice]:
+def slice_image(image: Image.Image, tiles: List[Rhombi]) -> List[Img_slice]:
     """
     Slice the original image into tiles and place them on a canvas.
     
@@ -58,40 +58,47 @@ def place_slices_on_canvas(canvas: Image.Image, slices: List[Img_slice]) -> None
         x, y = pos
         canvas.paste(slice_img, (int(x), int(y)), slice_img if slice_img.mode == 'RGBA' else None)
         
-def replace_slices(slices: List[Img_slice], database_path: str, scale_factor: float, image_database_path: str) -> List[Img_slice]:
+def replace_slices(slices: List[Img_slice], image_database: dict, scale_factor: float, image_database_path: str) -> List[Img_slice]:
     """
     Replace each slice with a random image from the database.
     
     Parameters:
     slices (List[Img_slice]): The image slices.
-    database_path (str): The path to the database.
+    image_database (dict): A dict with the available images.
     scale_factor (float): The scale factor.
     image_database_path (str): The path to the image database.
     
     Returns:
     List[Img_slice]: The image slices with replacements.
     """
-    with open(database_path, 'r') as file:
-        image_database = json.load(file)
     mosaic = []
     color_mosaic = []
+    slices_replaced = 0 
+    elapsed_time = [0, 0, 0]
     for slice_img, pos, inner_vert in slices:
+        # Start tracking time
+        loop_start = time.time()
         # Scale up the slice position
         scaled_pos = (pos[0] * scale_factor, pos[1] * scale_factor)
 
         # Scale up inner vertices
         scaled_inner_vert = [(x * scale_factor, y * scale_factor) for x, y in inner_vert]
-
+        
+        # Track matching time
+        matching_start = time.time()
         # Get average color of the slice
         avg_color = calculate_average_color(slice_img)
+        
         # Replacing with images from the database
         closest_color = min(image_database.values(), key=lambda color: color_distance(color[:3], avg_color))  
         
         # Get image with similar color
         closest_images = [image_path for image_path, color in image_database.items() if color == closest_color]
         image_path = random.choice(closest_images)
-        replacement_image = Image.open(str(image_database_path + image_path))
-        
+        replacement_image = Image.open(os.path.join(image_database_path, image_path))
+        # Calculate matching time
+        elapsed_time[1] += time.time() - matching_start
+
         # Define the bounding box for the replacement image and the scaling factor
         img_width, img_height = replacement_image.size
         tile_width, tile_height = calculate_bounding_box_dimensions(scaled_inner_vert)
@@ -99,28 +106,36 @@ def replace_slices(slices: List[Img_slice], database_path: str, scale_factor: fl
         scale_h = tile_height / img_height
         scale = max(scale_w, scale_h)
         
+        resize_start = time.time()
         # Resize, mask and append the images
-        color_variance = image_database[image_path][3]
-        color_dist = color_distance(image_database[image_path][:3], avg_color)
-        blend_strength = adjust_blend_strength(color_variance, color_dist)
-        
         new_size = (int(img_width * scale), int(img_height * scale))
         
+        # color_variance = image_database[image_path][3]
+        # color_dist = color_distance(image_database[image_path][:3], avg_color)
+        # blend_strength = adjust_blend_strength(color_variance, color_dist)
         replacement_image = replacement_image.resize(new_size)
-        replacement_image = overlay_blend(replacement_image, avg_color, blend_strength)
+        # replacement_image = overlay_blend(replacement_image, avg_color, blend_strength)
         cropped_replacement = get_masked_slice(replacement_image, scaled_inner_vert)
 
         # Create solid color image
         solid_color_img = Image.new('RGB', slice_img.size, avg_color)
-        
         solid_color_img = solid_color_img.resize(new_size)
         color_cropped = get_masked_slice(solid_color_img, scaled_inner_vert)
+        elapsed_time[2] += time.time() - resize_start
         
+        # Append slices
         mosaic.append((cropped_replacement, scaled_pos, scaled_inner_vert))
         color_mosaic.append((color_cropped, scaled_pos, scaled_inner_vert))
+        
+        elapsed_time[0] += time.time() - loop_start
+        slices_replaced += 1
+        if slices_replaced % 100 == 0:
+            print(f'Replaced {len(mosaic)} slices. Last 100 took {round(elapsed_time[0], 3)}s. Matching took {round(elapsed_time[1], 3)}s. Resizing took {round(elapsed_time[2], 3)}s.')
+            slices_replaced = 0
+            elapsed_time = [0, 0, 0]
     return (mosaic, color_mosaic)
 
-def overlay_blend(image: Image.Image, target_color: Tuple[int, int, int], opacity: float =0.5) -> Image.Image:
+def overlay_blend(image: Image.Image, target_color: Tuple[int, int, int], opacity: float = 0.5) -> Image.Image:
     """
     Blend the image with the target color.
     
@@ -213,10 +228,11 @@ def slice_and_place_images(image: Image.Image, tiles: List[Rhombi], config: dict
     place_slices_on_canvas(canvas, slices)
     draw_borders(canvas, tiles)
     canvas.save(os.path.join(config['output_path'], config['image_with_borders_name']), optimize=True)
-    log_message(f'7- Created {len(slices)} slices. Took {time.time() - config["timing"]["slice_image"]}', config)
+    elapsed_time = round(time.time() - config["timing"]["slice_image"], 3)
+    log_message(f'7- Created {len(slices)} slices. Took {elapsed_time}s', config)
     return slices
 
-def create_mosaic(slices: List[Img_slice], size: Tuple[int, int], config: dict) -> Image.Image:
+def create_mosaic(slices: List[Img_slice], size: Tuple[int, int], config: dict) -> Tuple[Image.Image, Image.Image]:
     """
     Create the mosaic by replacing the slices with images from the database.
     
@@ -230,11 +246,15 @@ def create_mosaic(slices: List[Img_slice], size: Tuple[int, int], config: dict) 
     """
     log_message(f'8- Replacing slices with images from database...', config)
     config['timing']['replace_slices'] = time.time()
-    mosaic, color_mosaic = replace_slices(slices, config['database_path'], config['scale_factor'], config['image_folder'])
+    with open(config['database_path'], 'r') as file:
+        database_dict = json.load(file)
+    mosaic, color_mosaic = replace_slices(slices, database_dict, config['scale_factor'], config['image_folder'])
     scaled_canvas_size = (int(size[0] * config['scale_factor']), int(size[1] * config['scale_factor']))
     new_canvas = create_canvas(scaled_canvas_size)
     color_canvas = create_canvas(scaled_canvas_size)
+    print('TEMP: Placing slices on canvas...')
     place_slices_on_canvas(new_canvas, mosaic)
     place_slices_on_canvas(color_canvas, color_mosaic)
-    log_message(f'9- Replaced {len(slices)} slices. Took {time.time() - config["timing"]["replace_slices"]}', config)
+    elapsed_time = round(time.time() - config["timing"]["replace_slices"], 3)
+    log_message(f'9- Replaced {len(slices)} slices. Took {elapsed_time}s', config)
     return new_canvas, color_canvas

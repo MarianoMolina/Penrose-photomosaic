@@ -4,7 +4,8 @@ __all__ = [
     'replace_slices', 
     'utils',
     'update_database',
-    'database_visualize'
+    'database_visualize',
+    'gradio_ui',
 ]
 
 # Convenience imports (adjust as per actual use-cases)
@@ -13,3 +14,4 @@ from .utils import *
 from .replace_slices import *
 from .update_database import *
 from .database_visualize import *
+from .gradio_ui import *

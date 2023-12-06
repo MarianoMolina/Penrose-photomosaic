@@ -2,8 +2,8 @@
 
 This project creates a unique photomosaic using Penrose tiling. It takes a target image, an image database, and a specified number of divisions, then assembles a mosaic where each tile is a slice of an image from the database. The matching is based on color proximity, offering a visually appealing and non-repeating pattern of Penrose tiles. It also provides a mosaic of simple colors of your target image. 
 
-![sparkles](screenshot_1.png)
-![sparkles](screenshot_2.png)
+![sparkles](test_images/screenshot_1.png)
+![sparkles](test_images/screenshot_2.png)
 
 ## Features
 
@@ -30,8 +30,22 @@ This project creates a unique photomosaic using Penrose tiling. It takes a targe
     ```
     pip install pillow matplotlib 
     ```
-    
-2. **Configuration**: Set up your configuration file `config.json` with the following structure:
+
+## Usage
+
+To run the photomosaic builder, execute:
+
+```
+python main.py
+```
+and click on the local host link. 
+
+![sparkles](test_images/gradio_screenshot.png)
+
+### Alternative Use -> Run the code manually
+If you prefer, you can use the functions directly. The start() method can be run by adjusting the following inputs:
+
+1. **Configuration**: Set up your configuration file `config.json` with the following structure:
     
     ```
    { 
@@ -58,19 +72,9 @@ This project creates a unique photomosaic using Penrose tiling. It takes a targe
     - `image_path`: Path to the target image for the photomosaic.
     - `output_path`: Directory where output images are saved.
     - `mosaic_name`, `tile_canvas_name`, `original_image_name`, `image_with_borders_name`: Names for various output files.
-3. **Image Database**: Populate the `source_folder` with images to be used in the mosaic.
-
-## Usage
-
-To run the photomosaic builder, execute:
-
-```
-python main.py
-```
-
-This script will process the images in your `source_folder` into the `image_folder`, create Penrose tiles from your `image_path` image, and assemble them into a photomosaic, alongside the rest of the outputs, in the `output_path`. 
-
-**Things to keep in mind / TODO:**
+2. **Image Database**: Populate the `source_folder` with images to be used in the mosaic and place your image on the photomosaic folder, and add replace the file name in config[`image_path`]
+ 
+## Things to keep in mind if you are using the code path / things TODO:
 1. Keep your image database in the source_folder -> The process checks each time you run it if its database needs updating, so if you remove images from the source_folder, the process will remove them from the database folder and the database json. 
 2. The program will not delete or modify in place your images. That being said, please keep backups of your images before using this. 
 3. Although I didn't make it available directly, you can adjust the functions in replace_slices.py to remove color blending. TODO: Make color blending configurable
@@ -78,27 +82,42 @@ This script will process the images in your `source_folder` into the `image_fold
 5. At the moment, the script requires you have images in your database. There is no check if that's not the case. TODO: Config if you want color mosaic, picture mosaic, or both. At the moment it gives you both. 
 6. The script algorithm isn't optimized, and adding divisions increases the amount of tiles by ~2^2,618 per division. 8 and above can be anything from a few minutes to an hour depending on your computer. 
 
-## Outputs
-
-The program generates the following outputs in the specified `output_path`:
-
-- Original target image.
-- Tiles visualization.
-- Image with Penrose tiling borders.
-- Solid color mosaic
-- Final photomosaic.
+## Examples
 
 ### Original target image
-![sparkles](output/1-original_image.png)
+![sparkles](test_images/example_target.png)
 
-### Penrose Tiling
-![sparkles](output/2-tile_canvas.png)
+### Example penrose Tiling
+Here you can see the result after 3 divisions. 
+![sparkles](test_images/rhombi.png)
 
-### Image with tiles drawn
-![sparkles](output/3-image_with_borders.png)
-
-### Solid color mosaic
-![sparkles](output/5-color_mosaic.png)
+### Solid color mosaic 
+9 divisions
+![sparkles](test_images/example_output_1.png)
 
 ### Photomosaic
-![sparkles](output/4-mosaic.png)
+9 divisions
+![sparkles](test_images/example_output_2.png)
+
+### Photomosaic + Color blend
+Using the color mosaic as a hard light layer on top of the photomosaic
+![sparkles](test_images/example_output_3.png)
+
+Note: The images are massive, these are simple screenshots. Here's a closeup for reference:
+![sparkles](test_images/example_closeup.png)
+
+
+## Number of Rhombi by division chosen
+You can think of this as the number of pixels in your new image:
+
+    1 divisions -> 10 rhombi
+    2 divisions -> 20 rhombi
+    3 divisions -> 60 rhombi
+    4 divisions -> 160 rhombi
+    5 divisions -> 430 rhombi
+    6 divisions -> 1140 rhombi 
+    7 divisions -> 3010 rhombi -> ~55 x 55 pixels
+    8 divisions -> 7920 rhombi -> ~89 x 89 pixels
+    9 divisions -> 20800 rhombi -> ~144 x 144 pixels
+    10 divisions -> 54560 rhombi -> ~233 x 233 pixels
+    11 divisions -> 143010 rhombi -> ~378 x 378 pixels
